@@ -1,0 +1,104 @@
+<button id="link-button">Link Account</button>
+
+<h3>Accounts:</h3>
+<div class="accounts-list"></div>
+
+<h3>Transactions:</h3>
+<div class="transaction-list"></div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.3/jquery.min.js"></script>
+<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+<script type="text/javascript">
+//  CLIENT_ID='5a187d104e95b865a853bac5'
+//  PUBLIC_KEY='6640e7ebc8314478b5652fcdfb19ba'
+//  SECRET_KEY='73e772bfddb6810914c9c3f0435c66'
+//  URL='https://sandbox.plaid.com'
+
+  (function($) {
+    var handler = Plaid.create({
+      clientName: 'Plaid Walkthrough Demo',
+      env: 'sandbox',
+      // Replace with your public_key from the Dashboard
+      key: '6640e7ebc8314478b5652fcdfb19ba',
+      product: ['transactions'],
+      // Optional, use webhooks to get transaction and error updates
+//      webhook: 'https://requestb.in',
+      onLoad: function() {
+        // Optional, called when Link loads
+      },
+      onSuccess: function(public_token, metadata) {
+        // Send the public_token to your app server.
+        // The metadata object contains info about the institution the
+        // user selected and the account ID, if the Account Select view
+        // is enabled.
+        $.when($.ajax({
+          type: 'POST',
+          url: "/plaid/get_access_token",
+          data: {
+            public_token: public_token,
+            metadata: metadata
+          },
+          dataType: "json"
+        })).done($.proxy(function(data){
+          var accounts = data.accounts;
+          var transactions = data.transactions;
+
+          for(var i = 0; i < accounts.length; i++) {
+            var account = accounts[i];
+            var name = 'Account name: '+account.official_name +'('+account.subtype+')';
+            var balances = 'Available balance: '+account.balances.available+'\n Current balance: '+account.balances.current+'\n Account limit: '+account.balances.limit;
+            var element1 = $('<h4>');
+            element1.text(name);
+            var element2 = $('<h4>');
+            element2.text(balances);
+            $('.accounts-list').append(element1);
+            $('.accounts-list').append(element2);
+            $('.account-list').append($('<hr>'));
+          }
+
+          for(var i = 0; i < transactions.length; i++) {
+            var transaction = transactions[i];
+            var amount = '$' + transaction.amount;
+            var message = i+') You spent '+amount+' on a transaction of '+transaction.name+' on '+transaction.date
+            var text = $('<h4>').text(message);
+            $('.transaction-list').append(text);
+          }
+        }, this)).fail($.proxy(function(xhr){
+          // should never fail
+        },this));
+
+//        $.post('/plaid/get_access_token', {
+//          public_token: public_token,
+//        }).success(
+//
+//        );
+      },
+      onExit: function(err, metadata) {
+        // The user exited the Link flow.
+        if (err != null) {
+          // The user encountered a Plaid API error prior to exiting.
+        }
+        // metadata contains information about the institution
+        // that the user selected and the most recent API request IDs.
+        // Storing this information can be helpful for support.
+      },
+      onEvent: function(eventName, metadata) {
+        // Optionally capture Link flow events, streamed through
+        // this callback as your users connect an Item to Plaid.
+        // For example:
+        // eventName = "TRANSITION_VIEW"
+        // metadata  = {
+        //   link_session_id: "123-abc",
+        //   mfa_type:        "questions",
+        //   timestamp:       "2017-09-14T14:42:19.350Z",
+        //   view_name:       "MFA",
+        // }
+      }
+    });
+
+    $('#link-button').on('click', function(e) {
+      handler.open();
+    });
+  })(jQuery);
+</script>

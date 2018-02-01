@@ -1,0 +1,9 @@
+<% if flash[:error] %>
+  <h6 style="background:red"><%= flash[:error] %></h6>
+<% end %>
+<% if flash[:success] %>
+  <h6 style="background:green"><%= flash[:success] %></h6>
+<% end %>
+<% if flash[:notice] %>
+  <h6 style="background:dodgerblue"><%= flash[:notice] %></h6>
+<% end %>
